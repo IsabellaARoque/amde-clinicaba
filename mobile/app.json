@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "ClinicABA",
+    "slug": "clinicaba",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.clinicaba"
+    }
+  }
+}
