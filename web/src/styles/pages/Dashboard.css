@@ -1,0 +1,21 @@
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--white);
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 2rem;
+}
+
+.search-icon {
+  color: var(--text-light);
+  margin-right: 0.5rem;
+}
+
+.search-bar input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 1rem;
+}

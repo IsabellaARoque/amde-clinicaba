@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: clinicaba-db
+    environment:
+      POSTGRES_DB: clinicaba
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d clinicaba"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - clinicaba-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: clinicaba-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/clinicaba
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - clinicaba-network
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: clinicaba-web
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - clinicaba-network
+
+volumes:
+  postgres_data:
+
+networks:
+  clinicaba-network:
+    driver: bridge
