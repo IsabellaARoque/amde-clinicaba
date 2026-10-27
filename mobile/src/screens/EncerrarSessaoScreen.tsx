@@ -51,7 +51,7 @@ const EncerrarSessaoScreen = ({ route, navigation }: any) => {
           numberOfLines={4}
         />
 
-        <Text style={styles.label}>Score Final da Sessão (%)</Text>
+        <Text style={styles.label}>Score Final da Sessão</Text>
         <TextInput
           style={styles.input}
           placeholder="Ex: 85"
