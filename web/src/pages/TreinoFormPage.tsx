@@ -7,34 +7,60 @@ import { Treino, Categoria } from '../types';
 const TreinoFormPage: React.FC = () => {
   const { planoId, id } = useParams();
   const navigate = useNavigate();
+
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [formData, setFormData] = useState<Partial<Treino>>({
-    nome: '', objetivo: '', atividade: '', medicao: 'FREQUENCIA'
+    nome: '',
+    objetivo: '',
+    atividade: '',
+    medicao: 'FREQUENCIA'
   });
+
   const [categoriaId, setCategoriaId] = useState<number | ''>('');
 
   useEffect(() => {
-    categoriaService.getAll().then(setCategorias);
-    if (id) {
-      treinoService.getById(Number(id)).then(data => {
-        setFormData(data);
-        if (data.categoriaTreino) {
-          setCategoriaId(data.categoriaTreino.id);
+    const carregarDados = async () => {
+      try {
+        const categoriasData = await categoriaService.getAll();
+        setCategorias(categoriasData);
+
+        if (id) {
+          const data = await treinoService.getById(Number(id));
+          setFormData(data);
+          const treinoDados = data as Treino & {
+            categoria?: Categoria | null;
+          };
+
+          const categoria =
+            treinoDados.categoria ?? treinoDados.categoriaTreino;
+
+          setCategoriaId(categoria?.id ?? '');
         }
-      });
-    }
+      } catch (error) {
+        console.error('Erro ao carregar dados do treino:', error);
+      }
+    };
+
+    carregarDados();
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (categoriaId === '') {
+      alert('Selecione uma categoria para o treino.');
+      return;
+    }
+
     try {
       const payload = {
         nome: formData.nome,
         objetivo: formData.objetivo,
         atividade: formData.atividade,
         medicao: formData.medicao,
-        categoriaId: categoriaId ? Number(categoriaId) : null
+        categoriaId: Number(categoriaId)
       };
+
       if (id) {
         await treinoService.update(Number(id), payload);
         navigate(-1);
@@ -51,40 +77,94 @@ const TreinoFormPage: React.FC = () => {
   return (
     <div className="page-container">
       <h1>{id ? 'Editar Treino' : 'Novo Treino'}</h1>
+
       <form onSubmit={handleSubmit} className="form-container">
         <div className="form-group">
           <label>Nome do Treino</label>
-          <input type="text" value={formData.nome || ''} onChange={e => setFormData({...formData, nome: e.target.value})} required />
+          <input
+            type="text"
+            value={formData.nome || ''}
+            onChange={e =>
+              setFormData({ ...formData, nome: e.target.value })
+            }
+            required
+          />
         </div>
+
         <div className="form-group">
           <label>Objetivo</label>
-          <textarea value={formData.objetivo || ''} onChange={e => setFormData({...formData, objetivo: e.target.value})} required />
+          <textarea
+            value={formData.objetivo || ''}
+            onChange={e =>
+              setFormData({ ...formData, objetivo: e.target.value })
+            }
+            required
+          />
         </div>
+
         <div className="form-group">
           <label>Atividade</label>
-          <textarea value={formData.atividade || ''} onChange={e => setFormData({...formData, atividade: e.target.value})} required />
+          <textarea
+            value={formData.atividade || ''}
+            onChange={e =>
+              setFormData({ ...formData, atividade: e.target.value })
+            }
+            required
+          />
         </div>
+
         <div className="form-row">
           <div className="form-group">
             <label>Categoria</label>
-            <select value={categoriaId} onChange={e => setCategoriaId(Number(e.target.value))} required>
+            <select
+              value={categoriaId}
+              onChange={e =>
+                setCategoriaId(
+                  e.target.value === '' ? '' : Number(e.target.value)
+                )
+              }
+              required
+            >
               <option value="">Selecione...</option>
+
               {categorias.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                <option key={cat.id} value={cat.id}>
+                  {cat.nome}
+                </option>
               ))}
             </select>
           </div>
+
           <div className="form-group">
             <label>Tipo de Medição</label>
-            <select value={formData.medicao || 'FREQUENCIA'} onChange={e => setFormData({...formData, medicao: e.target.value as 'FREQUENCIA'|'DURACAO'})} required>
+            <select
+              value={formData.medicao || 'FREQUENCIA'}
+              onChange={e =>
+                setFormData({
+                  ...formData,
+                  medicao: e.target.value as 'FREQUENCIA' | 'DURACAO'
+                })
+              }
+              required
+            >
               <option value="FREQUENCIA">Frequência</option>
               <option value="DURACAO">Duração</option>
             </select>
           </div>
         </div>
+
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>Cancelar</button>
-          <button type="submit" className="btn-primary">Salvar</button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => navigate(-1)}
+          >
+            Cancelar
+          </button>
+
+          <button type="submit" className="btn-primary">
+            Salvar
+          </button>
         </div>
       </form>
     </div>

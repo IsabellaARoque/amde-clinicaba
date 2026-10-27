@@ -37,8 +37,6 @@ const SessaoDetailScreen = ({ route }: any) => {
     if (duracao === null || duracao === undefined || duracao === '') {
       return 'Não informado';
     }
-
-    // Aceita duração numérica em segundos.
     if (typeof duracao === 'number' || !isNaN(Number(duracao))) {
       const totalSegundos = Number(duracao);
 
@@ -60,8 +58,6 @@ const SessaoDetailScreen = ({ route }: any) => {
 
       return `${segundos}s`;
     }
-
-    // Caso a API já retorne a duração formatada como texto.
     return String(duracao);
   };
 
