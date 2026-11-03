@@ -1,51 +1,44 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { Colors } from '../theme/colors';
+import { UI } from '../theme/styles';
 import { SessaoResumo } from '../types';
-
-interface SessaoCardProps {
-  sessao: SessaoResumo;
-  onPress: () => void;
-}
-
-export const SessaoCard = ({ sessao, onPress }: SessaoCardProps) => (
-  <TouchableOpacity style={styles.card} onPress={onPress}>
-    <View style={styles.header}>
-      <Text style={styles.title}>Sessão: {new Date(sessao.data).toLocaleDateString()}</Text>
-      <Text style={styles.score}>{sessao.score ? `${sessao.score.toFixed(2)}%` : 'N/A'}</Text>
+import { Badge } from './ScreenUI';
+import { formatDate } from '../utils/presentation';
+export const SessaoCard = ({ sessao, onPress }: { sessao: SessaoResumo; onPress: () => void }) => (
+  <Pressable
+    accessibilityRole="button"
+    accessibilityLabel={'Visualizar sessão de ' + formatDate(sessao.data)}
+    onPress={onPress}
+    style={({ pressed }) => [styles.card, pressed && { opacity: 0.8 }]}
+  >
+    <View style={[UI.row, { justifyContent: 'space-between', flexWrap: 'wrap' }]}>
+      <Text style={styles.title}>
+        {formatDate(sessao.data)} · {sessao.horaInicio?.slice(0, 5)}
+      </Text>
+      <Badge tone={sessao.horaFim ? 'success' : 'warning'}>
+        {sessao.horaFim ? 'Encerrada' : 'Em aberto'}
+      </Badge>
     </View>
-    <Text style={styles.subtitle}>Plano: {sessao.planoNome}</Text>
-    <Text style={styles.subtitle}>Duração: {sessao.horaInicio} - {sessao.horaFim || 'Em andamento'}</Text>
-  </TouchableOpacity>
+    <Text style={UI.body}>{sessao.profissionalNome}</Text>
+    <Text style={UI.body}>{sessao.planoNome}</Text>
+    <View style={[UI.row, { justifyContent: 'space-between' }]}>
+      <Text style={styles.score}>
+        {sessao.horaFim && sessao.score != null ? 'Score: ' + sessao.score : 'Sessão em andamento'}
+      </Text>
+      <Text style={styles.link}>Visualizar →</Text>
+    </View>
+  </Pressable>
 );
-
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surface,
-    padding: 16,
-    borderRadius: 8,
-    marginVertical: 8,
-    elevation: 2,
+    backgroundColor: Colors.primarySoft,
+    padding: 18,
+    borderRadius: 22,
+    marginVertical: 4,
+    gap: 8,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 16,
-    color: Colors.text,
-    fontWeight: 'bold',
-  },
-  score: {
-    fontSize: 16,
-    color: Colors.primary,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 4,
-  },
+  title: { fontSize: 15, color: Colors.text, fontWeight: '700', flexShrink: 1 },
+  score: { fontSize: 12, color: Colors.textSecondary, flexShrink: 1 },
+  link: { fontSize: 13, fontWeight: '700', color: Colors.primaryDark },
 });

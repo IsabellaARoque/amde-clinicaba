@@ -57,7 +57,7 @@ export interface RegistroDuracao {
 export interface TreinoSessao {
   id: number;
   treino: Treino;
-  score: number;
+  score: number | null;
   observacoes: string;
   registroFrequencia?: RegistroFrequencia;
   registroDuracao?: RegistroDuracao;
@@ -73,7 +73,7 @@ export interface Sessao {
   data: string;
   horaInicio: string;
   horaFim: string;
-  score: number;
+  score: number | null;
   observacoes: string;
   treinosSessao: TreinoSessao[];
 }

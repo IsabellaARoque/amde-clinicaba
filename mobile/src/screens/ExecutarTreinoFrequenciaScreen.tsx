@@ -1,356 +1,209 @@
-
-import React, { useState } from 'react';
-import {
-  ScrollView,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  TextInput,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert, Platform } from 'react-native';
 import { treinoService } from '../services/treinoService';
 import { getApiErrorMessage } from '../services/getApiErrorMessage';
+import { FormField, FormScreen } from '../components/FormScreen';
+import { AppButton, Badge, SectionHeading } from '../components/ScreenUI';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
+import { isValidScore } from '../utils/presentation';
 import { Colors } from '../theme/colors';
-
-type ResultadoTentativa = 'semAjuda' | 'comAjuda' | 'naoExecutado';
-
+import { UI } from '../theme/styles';
+type Resultado = 'semAjuda' | 'comAjuda' | 'naoExecutado';
+const choices: { result: Resultado; label: string; color: string; background: string }[] = [
+  {
+    result: 'semAjuda',
+    label: 'Executou sem ajuda',
+    color: Colors.success,
+    background: Colors.successSoft,
+  },
+  {
+    result: 'comAjuda',
+    label: 'Executou com ajuda',
+    color: Colors.warning,
+    background: Colors.warningSoft,
+  },
+  {
+    result: 'naoExecutado',
+    label: 'Não executou',
+    color: Colors.danger,
+    background: Colors.dangerSoft,
+  },
+];
 const ExecutarTreinoFrequenciaScreen = ({ route, navigation }: any) => {
   const { sessaoId, treinoId } = route.params;
-
-  const [tentativas, setTentativas] = useState<ResultadoTentativa[]>([]);
-
+  const [tentativas, setTentativas] = useState<Resultado[]>([]);
   const [observacoes, setObservacoes] = useState('');
   const [score, setScore] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const numeroTentativa = tentativas.length + 1;
-  const handleRegistrarTentativa = (resultado: ResultadoTentativa) => {
-    setTentativas(prev => [...prev, resultado]);
-  };
-
-  const handleSalvar = async () => {
-    if (tentativas.length === 0) {
-      Alert.alert('Atenção', 'Registre pelo menos uma tentativa.');
+  const [showAll, setShowAll] = useState(false);
+  const lock = useRef(false);
+  const permitExit = useUnsavedChanges(tentativas.length > 0 || !!observacoes || !!score, saving);
+  const salvar = async () => {
+    if (lock.current) return;
+    if (!tentativas.length) {
+      Alert.alert('Registre uma tentativa', 'Selecione o resultado de pelo menos uma tentativa.');
       return;
     }
-
-    if (!score.trim() || isNaN(Number(score))) {
-      Alert.alert('Erro', 'Informe um score numérico válido.');
+    if (!isValidScore(score)) {
+      Alert.alert('Confira o score', 'Informe um número inteiro válido.');
       return;
     }
-
-    if (
-      !Number.isInteger(Number(score)) ||
-      Number(score) < 0 ||
-      Number(score) > 100
-    ) {
-      Alert.alert(
-        'Erro',
-        'O score deve ser um número inteiro entre 0 e 100.',
-      );
-      return;
-    }
-    const execSemAjuda = tentativas.filter(
-      resultado => resultado === 'semAjuda',
-    ).length;
-
-    const execComAjuda = tentativas.filter(
-      resultado => resultado === 'comAjuda',
-    ).length;
-
-    const naoExecutado = tentativas.filter(
-      resultado => resultado === 'naoExecutado',
-    ).length;
-
+    lock.current = true;
     setSaving(true);
-
     try {
-      const ts = await treinoService.iniciarTreinoSessao(
-        sessaoId,
-        treinoId,
-      );
-
+      const treinoSessao = await treinoService.iniciarTreinoSessao(sessaoId, treinoId);
       await treinoService.registroFrequencia(
-        ts.id,
-        execSemAjuda,
-        execComAjuda,
-        naoExecutado,
+        treinoSessao.id,
+        tentativas.filter((item) => item === 'semAjuda').length,
+        tentativas.filter((item) => item === 'comAjuda').length,
+        tentativas.filter((item) => item === 'naoExecutado').length,
       );
-
-      await treinoService.encerrarTreinoSessao(
-        ts.id,
-        observacoes,
-        Number(score),
-      );
-
-      Alert.alert('Sucesso', 'Treino finalizado e salvo!', [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]);
-    } catch (error) {
-      console.error(error);
+      await treinoService.encerrarTreinoSessao(treinoSessao.id, observacoes.trim(), Number(score));
+      permitExit();
+      navigation.goBack();
+    } catch (err) {
       Alert.alert(
-        'Erro',
-        getApiErrorMessage(error, 'Não foi possível salvar o treino.'),
+        'Não foi possível salvar',
+        getApiErrorMessage(err, 'Seus dados continuam nesta tela. Tente novamente.'),
       );
     } finally {
+      lock.current = false;
       setSaving(false);
     }
   };
-
-  const opcoes = [
-    {
-      resultado: 'semAjuda' as const,
-      texto: 'Executou sem ajuda',
-      estilo: styles.btnGreen,
-    },
-    {
-      resultado: 'comAjuda' as const,
-      texto: 'Executou com ajuda',
-      estilo: styles.btnYellow,
-    },
-    {
-      resultado: 'naoExecutado' as const,
-      texto: 'Não executou',
-      estilo: styles.btnRed,
-    },
-  ];
-
-  const nomeResultado = (resultado: ResultadoTentativa) => {
-    switch (resultado) {
-      case 'semAjuda':
-        return 'Executou sem ajuda';
-      case 'comAjuda':
-        return 'Executou com ajuda';
-      case 'naoExecutado':
-        return 'Não executou';
-    }
-  };
-
+  const visible = showAll ? tentativas : tentativas.slice(-5);
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title}>Registro de Frequência</Text>
-
-        <View style={styles.attemptCard}>
-          <Text style={styles.attemptLabel}>Tentativa atual</Text>
-          <Text style={styles.attemptNumber}>{numeroTentativa}</Text>
-          <Text style={styles.description}>
-            Selecione o resultado para avançar para a próxima tentativa.
-          </Text>
-        </View>
-
-        <View style={styles.buttonsContainer}>
-          {opcoes.map(opcao => (
-            <TouchableOpacity
-              key={opcao.resultado}
-              style={[styles.btn, opcao.estilo]}
-              onPress={() => handleRegistrarTentativa(opcao.resultado)}
-              disabled={saving}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.btnText}>{opcao.texto}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.summary}>
-          <Text style={styles.sectionTitle}>
-            Tentativas registradas: {tentativas.length}
-          </Text>
-
-          {tentativas.length === 0 ? (
-            <Text style={styles.emptyText}>
-              Nenhuma tentativa registrada ainda.
+    <FormScreen>
+      <Text style={UI.eyebrow}>REGISTRO DE FREQUÊNCIA</Text>
+      <Text style={UI.title}>Uma tentativa por vez</Text>
+      <View style={styles.attempt}>
+        <Badge>Próxima tentativa</Badge>
+        <Text style={styles.number}>{tentativas.length + 1}</Text>
+        <Text style={[UI.body, { textAlign: 'center' }]}>
+          Toque no resultado observado para registrar.
+        </Text>
+      </View>
+      <View style={{ gap: 10 }}>
+        {choices.map((choice) => (
+          <Pressable
+            key={choice.result}
+            accessibilityRole="button"
+            disabled={saving}
+            accessibilityState={{ disabled: saving }}
+            onPress={() => setTentativas((prev) => [...prev, choice.result])}
+            style={({ pressed }) => [
+              styles.result,
+              {
+                backgroundColor: choice.background,
+                borderColor: choice.color,
+                opacity: saving ? 0.5 : pressed ? 0.75 : 1,
+              },
+            ]}
+          >
+            <View style={[styles.dot, { backgroundColor: choice.color }]} />
+            <Text style={[styles.resultText, { color: choice.color }]}>{choice.label}</Text>
+            <Text style={[styles.count, { color: choice.color }]}>
+              {tentativas.filter((item) => item === choice.result).length}
             </Text>
-          ) : (
-            tentativas.map((resultado, index) => (
-              <View key={index} style={styles.historyItem}>
-                <Text style={styles.historyNumber}>
-                  Tentativa {index + 1}
+          </Pressable>
+        ))}
+      </View>
+      <SectionHeading title="Tentativas registradas" count={tentativas.length} />
+      {!!tentativas.length && (
+        <>
+          <AppButton
+            title="Desfazer última tentativa"
+            tone="ghost"
+            disabled={saving}
+            onPress={() => setTentativas((prev) => prev.slice(0, -1))}
+          />
+          <View style={[UI.card, { padding: 16 }]}>
+            {visible.map((result, index) => (
+              <View
+                key={(showAll ? 0 : Math.max(0, tentativas.length - 5)) + index}
+                style={styles.history}
+              >
+                <Text style={UI.body}>
+                  {'#' + ((showAll ? 0 : Math.max(0, tentativas.length - 5)) + index + 1)}
                 </Text>
-                <Text style={styles.historyResult}>
-                  {nomeResultado(resultado)}
+                <Text
+                  style={[
+                    UI.body,
+                    {
+                      color: choices.find((choice) => choice.result === result)?.color,
+                      flex: 1,
+                      textAlign: 'right',
+                    },
+                  ]}
+                >
+                  {choices.find((choice) => choice.result === result)?.label}
                 </Text>
               </View>
-            ))
+            ))}
+          </View>
+          {tentativas.length > 5 && (
+            <AppButton
+              title={showAll ? 'Mostrar últimas 5' : 'Ver todas as tentativas'}
+              tone="ghost"
+              onPress={() => setShowAll((prev) => !prev)}
+            />
           )}
-        </View>
-
-        <TextInput
-          style={[styles.input, styles.observationsInput]}
-          placeholder="Observações do treino"
-          value={observacoes}
-          onChangeText={setObservacoes}
-          multiline
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Score (%)"
-          value={score}
-          onChangeText={setScore}
-          keyboardType="numeric"
-        />
-
-        <TouchableOpacity
-          style={[styles.saveBtn, saving && styles.disabledButton]}
-          onPress={handleSalvar}
-          disabled={saving}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.saveText}>
-            {saving ? 'SALVANDO...' : 'FINALIZAR TREINO'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+        </>
+      )}
+      {!tentativas.length && <Text style={UI.body}>Nenhuma tentativa registrada ainda.</Text>}
+      <FormField
+        label="Observações do treino"
+        placeholder="Registre respostas, dificuldades e avanços..."
+        value={observacoes}
+        onChangeText={setObservacoes}
+        multiline
+        editable={!saving}
+      />
+      <FormField
+        label="Score do treino *"
+        hint="Valor inteiro informado pela clínica."
+        placeholder="Ex.: 85"
+        value={score}
+        onChangeText={setScore}
+        keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
+        editable={!saving}
+        returnKeyType="done"
+      />
+      <AppButton
+        title={saving ? 'Salvando...' : 'Finalizar treino'}
+        loading={saving}
+        onPress={salvar}
+      />
+    </FormScreen>
   );
 };
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  container: {
-    flexGrow: 1,
-    backgroundColor: Colors.background,
-    padding: 16,
-    paddingBottom: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.text,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  attemptCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  attemptLabel: {
-    fontSize: 16,
-    color: Colors.text,
-  },
-  attemptNumber: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: Colors.primary,
-    marginVertical: 4,
-  },
-  description: {
-    fontSize: 13,
-    color: Colors.text,
-    textAlign: 'center',
-  },
-  buttonsContainer: {
+  attempt: {
+    backgroundColor: Colors.primarySoft,
+    padding: 22,
+    borderRadius: 26,
     gap: 10,
-    marginBottom: 20,
-  },
-  btn: {
-    paddingVertical: 13,
-    paddingHorizontal: 12,
-    borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2,
   },
-  btnGreen: {
-    backgroundColor: Colors.success,
+  number: {
+    fontSize: 60,
+    lineHeight: 72,
+    fontWeight: '700',
+    color: Colors.primaryDark,
+    fontVariant: ['tabular-nums'],
   },
-  btnYellow: {
-    backgroundColor: Colors.warning,
-  },
-  btnRed: {
-    backgroundColor: Colors.danger,
-  },
-  btnText: {
-    fontSize: 16,
-    color: Colors.surface,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  summary: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 10,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.text,
-  },
-  historyItem: {
+  result: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 9,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: 8,
-  },
-  historyNumber: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  historyResult: {
-    fontSize: 13,
-    color: Colors.text,
-    flexShrink: 1,
-    textAlign: 'right',
-  },
-  input: {
-    backgroundColor: Colors.surface,
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
+    gap: 12,
+    padding: 17,
+    minHeight: 60,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: Colors.border,
-    fontSize: 16,
-    color: Colors.text,
   },
-  observationsInput: {
-    minHeight: 90,
-    textAlignVertical: 'top',
-  },
-  saveBtn: {
-    backgroundColor: Colors.primary,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  disabledButton: {
-    opacity: 0.55,
-  },
-  saveText: {
-    color: Colors.surface,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+  resultText: { fontSize: 15, lineHeight: 22, fontWeight: '700', flex: 1 },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  count: { fontSize: 19, fontWeight: '700' },
+  history: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
 });
-
 export default ExecutarTreinoFrequenciaScreen;

@@ -6,7 +6,8 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "android": {
-      "package": "com.clinicaba"
+      "package": "com.clinicaba",
+      "softwareKeyboardLayoutMode": "resize"
     }
   }
 }

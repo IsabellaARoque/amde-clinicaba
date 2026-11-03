@@ -1,114 +1,166 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Alert, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Alert, AppState, Platform } from 'react-native';
 import { treinoService } from '../services/treinoService';
 import { getApiErrorMessage } from '../services/getApiErrorMessage';
+import { FormField, FormScreen } from '../components/FormScreen';
+import { AppButton, Badge } from '../components/ScreenUI';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
+import { formatClock, isValidScore } from '../utils/presentation';
 import { Colors } from '../theme/colors';
-
+import { UI } from '../theme/styles';
 const ExecutarTreinoDuracaoScreen = ({ route, navigation }: any) => {
   const { sessaoId, treinoId } = route.params;
-  const [segundos, setSegundos] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const [running, setRunning] = useState(false);
   const [observacoes, setObservacoes] = useState('');
   const [score, setScore] = useState('');
   const [saving, setSaving] = useState(false);
-
+  const elapsedMs = useRef(0);
+  const startedAt = useRef<number | null>(null);
+  const lock = useRef(false);
+  const permitExit = useUnsavedChanges(running || seconds > 0 || !!observacoes || !!score, saving);
+  const getElapsedMs = () =>
+    elapsedMs.current + (startedAt.current === null ? 0 : Date.now() - startedAt.current);
   useEffect(() => {
-    if (!isRunning) return undefined;
-    const interval = setInterval(() => setSegundos(prev => prev + 1), 1000);
-    return () => clearInterval(interval);
-  }, [isRunning]);
-
-  const toggleTimer = () => setIsRunning(!isRunning);
-  const resetTimer = () => { setIsRunning(false); setSegundos(0); };
-
-  const formatTime = (totalSeconds: number) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    if (!running) return;
+    const sync = () => setSeconds(Math.floor(getElapsedMs() / 1000));
+    const timer = setInterval(sync, 250);
+    const listener = AppState.addEventListener('change', (state) => {
+      if (state === 'active') sync();
+    });
+    return () => {
+      clearInterval(timer);
+      listener.remove();
+    };
+  }, [running]);
+  const toggle = () => {
+    if (running) {
+      elapsedMs.current = getElapsedMs();
+      startedAt.current = null;
+      setSeconds(Math.floor(elapsedMs.current / 1000));
+      setRunning(false);
+    } else {
+      startedAt.current = Date.now();
+      setRunning(true);
+    }
   };
-
-  const handleSalvar = async () => {
-    if (!score || isNaN(Number(score))) {
-      Alert.alert('Erro', 'Informe um score numérico válido.');
+  const reset = () =>
+    Alert.alert('Zerar cronômetro?', 'A duração registrada até agora será descartada.', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Zerar',
+        style: 'destructive',
+        onPress: () => {
+          elapsedMs.current = 0;
+          startedAt.current = null;
+          setRunning(false);
+          setSeconds(0);
+        },
+      },
+    ]);
+  const salvar = async () => {
+    if (lock.current || running) return;
+    if (!isValidScore(score)) {
+      Alert.alert('Confira o score', 'Informe um número inteiro válido.');
       return;
     }
-    if (!Number.isInteger(Number(score)) || Number(score) < 0 || Number(score) > 100) {
-      Alert.alert('Erro', 'O score deve ser um número inteiro entre 0 e 100.');
-      return;
-    }
+    lock.current = true;
     setSaving(true);
     try {
       const ts = await treinoService.iniciarTreinoSessao(sessaoId, treinoId);
-      await treinoService.registroDuracao(ts.id, segundos);
-      await treinoService.encerrarTreinoSessao(ts.id, observacoes, Number(score));
+      await treinoService.registroDuracao(ts.id, Math.floor(elapsedMs.current / 1000));
+      await treinoService.encerrarTreinoSessao(ts.id, observacoes.trim(), Number(score));
+      permitExit();
       navigation.goBack();
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Erro', getApiErrorMessage(error, 'Não foi possível salvar o treino.'));
+    } catch (err) {
+      Alert.alert(
+        'Não foi possível salvar',
+        getApiErrorMessage(err, 'Seus dados continuam nesta tela. Tente novamente.'),
+      );
     } finally {
+      lock.current = false;
       setSaving(false);
     }
   };
-
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Registro de Duração</Text>
-      
-      <View style={styles.timerContainer}>
-        <Text style={styles.timerText}>{formatTime(segundos)}</Text>
+    <FormScreen>
+      <Text style={UI.eyebrow}>REGISTRO DE DURAÇÃO</Text>
+      <Text style={UI.title}>Tempo de atividade</Text>
+      <Text style={UI.body}>Inicie o cronômetro durante a atividade e pause antes de salvar.</Text>
+      <View style={styles.timer}>
+        <Badge tone={running ? 'success' : 'muted'}>
+          {running ? 'Em andamento' : seconds > 0 ? 'Pausado' : 'Pronto para iniciar'}
+        </Badge>
+        <Text accessibilityLabel={'Duração: ' + seconds + ' segundos'} style={styles.clock}>
+          {formatClock(seconds)}
+        </Text>
+        <Text style={UI.body}>minutos : segundos</Text>
       </View>
-
-      <View style={styles.controls}>
-        <TouchableOpacity style={[styles.controlBtn, isRunning ? styles.btnRed : styles.btnGreen]} onPress={toggleTimer}>
-          <Text style={styles.btnText}>{isRunning ? 'PAUSAR' : 'INICIAR'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.controlBtn, styles.btnGray]} onPress={resetTimer}>
-          <Text style={styles.btnText}>ZERAR</Text>
-        </TouchableOpacity>
+      <View style={UI.row}>
+        <View style={{ flex: 1 }}>
+          <AppButton
+            title={running ? 'Pausar' : seconds > 0 ? 'Continuar' : 'Iniciar'}
+            tone={running ? 'accent' : 'success'}
+            disabled={saving}
+            onPress={toggle}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <AppButton
+            title="Zerar"
+            tone="ghost"
+            disabled={saving || (!running && !seconds)}
+            onPress={reset}
+          />
+        </View>
       </View>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Observações do treino"
+      <FormField
+        label="Observações do treino"
+        placeholder="Registre o comportamento durante a atividade..."
         value={observacoes}
         onChangeText={setObservacoes}
         multiline
+        editable={!saving}
       />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Score (%)"
+      <FormField
+        label="Score do treino *"
+        hint="Valor inteiro informado pela clínica."
+        placeholder="Ex.: 85"
         value={score}
         onChangeText={setScore}
-        keyboardType="numeric"
+        keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
+        editable={!saving}
+        returnKeyType="done"
       />
-
-      <TouchableOpacity style={[styles.saveBtn, (saving || isRunning) && styles.disabledButton]} onPress={handleSalvar} disabled={saving || isRunning}>
-        <Text style={styles.saveText}>{saving ? 'SALVANDO...' : 'SALVAR TREINO'}</Text>
-      </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+      {running && (
+        <Text accessibilityRole="alert" style={UI.body}>
+          Pause o cronômetro para salvar o treino.
+        </Text>
+      )}
+      <AppButton
+        title={saving ? 'Salvando...' : 'Salvar treino'}
+        loading={saving}
+        disabled={running}
+        onPress={salvar}
+      />
+    </FormScreen>
   );
 };
-
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: Colors.background },
-  container: { flexGrow: 1, backgroundColor: Colors.background, padding: 16, paddingBottom: 24 },
-  title: { fontSize: 24, fontWeight: 'bold', color: Colors.text, textAlign: 'center', marginBottom: 24 },
-  timerContainer: { backgroundColor: Colors.surface, padding: 48, borderRadius: 100, alignSelf: 'center', elevation: 4, marginBottom: 32 },
-  timerText: { fontSize: 48, fontWeight: 'bold', color: Colors.text },
-  controls: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 32 },
-  controlBtn: { paddingVertical: 16, paddingHorizontal: 32, borderRadius: 8, elevation: 2 },
-  btnGreen: { backgroundColor: Colors.success },
-  btnRed: { backgroundColor: Colors.danger },
-  btnGray: { backgroundColor: Colors.gray },
-  btnText: { color: Colors.surface, fontSize: 16, fontWeight: 'bold' },
-  input: { backgroundColor: Colors.surface, padding: 16, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: Colors.border, fontSize: 16 },
-  saveBtn: { backgroundColor: Colors.primary, padding: 16, borderRadius: 8, alignItems: 'center' },
-  disabledButton: { opacity: 0.55 },
-  saveText: { color: Colors.surface, fontSize: 18, fontWeight: 'bold' }
+  timer: {
+    alignItems: 'center',
+    paddingVertical: 36,
+    paddingHorizontal: 16,
+    gap: 16,
+    backgroundColor: Colors.primarySoft,
+    borderRadius: 30,
+  },
+  clock: {
+    fontSize: 60,
+    lineHeight: 76,
+    fontWeight: '700',
+    color: Colors.text,
+    fontVariant: ['tabular-nums'],
+  },
 });
-
 export default ExecutarTreinoDuracaoScreen;

@@ -8,7 +8,9 @@
     "ios": "expo start --host lan --ios",
     "start": "expo start --host lan",
     "test": "jest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "check:ui": "node --experimental-strip-types --test checks/regressions.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -39,6 +41,6 @@
     "typescript": "~6.0.3"
   },
   "engines": {
-    "node": ">=16"
+    "node": "^22.13.0 || ^24.3.0 || ^26.0.0 || >=27.0.0"
   }
 }

@@ -42,14 +42,24 @@ const AssistidoDetailPage: React.FC = () => {
 
   const planosAtivos = planos.filter(p => p.status === 'ATIVO');
   const planosInativos = planos.filter(p => p.status === 'INATIVO');
+  const nascimento = assistido.dataNasc
+    ? new Date(`${assistido.dataNasc}T12:00:00`).toLocaleDateString('pt-BR')
+    : 'Não informado';
 
   return (
     <div className="page-container detail-page">
       <div className="page-header">
-        <h1>{assistido.nome}</h1>
+        <div>
+          <p className="page-eyebrow">PACIENTE</p>
+          <div className="patient-title"><h1>{assistido.nome}</h1></div>
+          <div className="patient-meta">
+            {assistido.periodo && <span className="meta-badge">{assistido.periodo}</span>}
+            {assistido.sala && <span className="meta-badge">Sala {assistido.sala}</span>}
+          </div>
+        </div>
         <div className="header-actions">
-          <Link to={`/assistidos/${assistidoId}/editar`} className="btn-secondary"><FiEdit /> Editar</Link>
-          <Link to={`/assistidos/${assistidoId}/sessoes`} className="btn-secondary"><FiList /> Histórico</Link>
+          <Link to={`/assistidos/${assistidoId}/editar`} className="btn-secondary"><FiEdit /> Editar dados</Link>
+          <Link to={`/assistidos/${assistidoId}/sessoes`} className="btn-secondary"><FiList /> Ver histórico</Link>
         </div>
       </div>
 
@@ -57,14 +67,14 @@ const AssistidoDetailPage: React.FC = () => {
         <div className="info-card">
           <h3>Informações Pessoais</h3>
           <p><strong>CPF:</strong> {assistido.cpf}</p>
-          <p><strong>Nascimento:</strong> {assistido.dataNasc}</p>
-          <p><strong>Responsável:</strong> {assistido.nomeResponsavel}</p>
+          <p><strong>Nascimento:</strong> {nascimento}</p>
+          <p><strong>Responsável:</strong> {assistido.nomeResponsavel || 'Não informado'}</p>
         </div>
         <div className="info-card">
           <h3>Dados Clínicos</h3>
-          <p><strong>Convênio:</strong> {assistido.convenio}</p>
-          <p><strong>Sala:</strong> {assistido.sala}</p>
-          <p><strong>Agente:</strong> {assistido.agenteDaSala}</p>
+          <p><strong>Convênio:</strong> {assistido.convenio || 'Não informado'}</p>
+          <p><strong>Sala:</strong> {assistido.sala || 'Não informada'}</p>
+          <p><strong>Agente:</strong> {assistido.agenteDaSala || 'Não informado'}</p>
         </div>
       </div>
 
@@ -73,7 +83,7 @@ const AssistidoDetailPage: React.FC = () => {
         <div className="scores-grid">
           {scores.length > 0 ? scores.map(score => (
             <ScoreCard key={score.categoriaId} score={score} />
-          )) : <p>Nenhum score registrado.</p>}
+          )) : <p className="no-data">Os resultados aparecerão após o registro dos treinos.</p>}
         </div>
       </section>
 
@@ -84,7 +94,7 @@ const AssistidoDetailPage: React.FC = () => {
         </div>
         <div className="planos-grid">
           {planosAtivos.map(plano => <PlanoCard key={plano.id} plano={plano} />)}
-          {planosAtivos.length === 0 && <p>Nenhum plano ativo.</p>}
+          {planosAtivos.length === 0 && <p className="no-data">Nenhum plano ativo. Crie um plano para organizar os próximos treinos.</p>}
         </div>
       </section>
 

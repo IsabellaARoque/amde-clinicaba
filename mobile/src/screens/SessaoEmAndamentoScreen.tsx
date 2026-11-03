@@ -1,106 +1,142 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, ScrollView, RefreshControl, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sessaoService } from '../services/sessaoService';
 import { planoService } from '../services/planoService';
+import { getApiErrorMessage } from '../services/getApiErrorMessage';
 import { Sessao, Treino } from '../types';
+import { UI } from '../theme/styles';
 import { Colors } from '../theme/colors';
+import { sessionTrainingGroups } from '../utils/session';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { TreinoCard } from '../components/TreinoCard';
-import { useIsFocused } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { AppButton, Badge, EmptyState, ErrorNotice, SectionHeading } from '../components/ScreenUI';
 const SessaoEmAndamentoScreen = ({ route, navigation }: any) => {
   const { sessaoId } = route.params;
   const insets = useSafeAreaInsets();
   const [sessao, setSessao] = useState<Sessao | null>(null);
   const [treinos, setTreinos] = useState<Treino[]>([]);
   const [loading, setLoading] = useState(true);
-  const isFocused = useIsFocused();
-
-  useEffect(() => {
-    if (isFocused) {
-      loadData();
-    }
-  }, [isFocused]);
-
-  const loadData = async () => {
+  const [error, setError] = useState('');
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
     try {
       const s = await sessaoService.getSessao(sessaoId);
       setSessao(s);
-      if (s.planoIntervencaoId) {
-        const t = await planoService.getTreinosByPlano(s.planoIntervencaoId);
-        setTreinos(t);
-      }
-    } catch (error) {
-      console.error(error);
+      setTreinos(await planoService.getTreinosByPlano(s.planoIntervencaoId));
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível carregar a sessão.'));
     } finally {
       setLoading(false);
     }
+  }, [sessaoId]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
+  if (loading && !sessao) return <LoadingSpinner />;
+  if (!sessao)
+    return (
+      <View style={[UI.screen, UI.content]}>
+        <EmptyState title="Não foi possível abrir a sessão" description={error} onRetry={load} />
+      </View>
+    );
+  const {
+    selected,
+    planned: sessionTreinos,
+    others,
+    completed: done,
+  } = sessionTrainingGroups(sessao.treinosSessao ?? [], treinos);
+  const completed = (id: number) => selected.get(id)?.score != null;
+  const executar = (treino: Treino) => {
+    if (sessao.horaFim || completed(treino.id)) return;
+    navigation.navigate(
+      treino.medicao === 'FREQUENCIA' ? 'ExecutarTreinoFrequencia' : 'ExecutarTreinoDuracao',
+      { sessaoId, treinoId: treino.id },
+    );
   };
-
-  const isTreinoRealizado = (treinoId: number) => {
-    return sessao?.treinosSessao?.some(ts => ts.treino.id === treinoId);
+  const encerrar = () => {
+    const pending = sessionTreinos.length - done;
+    const go = () => navigation.navigate('EncerrarSessao', { sessaoId });
+    if (pending > 0)
+      Alert.alert(
+        'Há treinos pendentes',
+        'Ainda há ' + pending + ' treino(s) sem resultado. Deseja encerrar a sessão mesmo assim?',
+        [
+          { text: 'Continuar sessão', style: 'cancel' },
+          { text: 'Encerrar', onPress: go },
+        ],
+      );
+    else go();
   };
-
-  const handleExecutarTreino = (treino: Treino) => {
-    if (isTreinoRealizado(treino.id)) {
-      Alert.alert('Aviso', 'Este treino já foi realizado nesta sessão.');
-      return;
-    }
-
-    if (treino.medicao === 'FREQUENCIA') {
-      navigation.navigate('ExecutarTreinoFrequencia', { sessaoId, treinoId: treino.id });
-    } else {
-      navigation.navigate('ExecutarTreinoDuracao', { sessaoId, treinoId: treino.id });
-    }
-  };
-
-  if (loading || !sessao) return <LoadingSpinner />;
-
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 116 + insets.bottom }]}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Assistido: {sessao.assistidoNome}</Text>
-          <Text style={styles.info}>Início: {sessao.horaInicio}</Text>
+    <View style={UI.screen}>
+      <ScrollView
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
+        contentContainerStyle={[UI.content, { paddingBottom: 28 }]}
+      >
+        <View style={[UI.card, { backgroundColor: Colors.primarySoft, gap: 12 }]}>
+          <Badge tone={sessao.horaFim ? 'muted' : 'success'}>
+            {sessao.horaFim ? 'Sessão encerrada' : 'Atendimento em andamento'}
+          </Badge>
+          <Text style={UI.title}>{sessao.assistidoNome}</Text>
+          <Text style={UI.body}>{sessao.planoNome}</Text>
+          <Text style={UI.body}>Início às {sessao.horaInicio?.slice(0, 5)}</Text>
+          <Text style={UI.label}>
+            {done} de {sessionTreinos.length} treinos concluídos
+          </Text>
         </View>
-
-        <Text style={styles.subtitle}>Treinos Pendentes</Text>
-        {treinos.map(treino => {
-          const realizado = isTreinoRealizado(treino.id);
-          return (
-            <TouchableOpacity 
-              key={treino.id} 
-              onPress={() => handleExecutarTreino(treino)}
-              style={{ opacity: realizado ? 0.5 : 1 }}
-            >
-              <TreinoCard treino={treino} />
-              {realizado && <Text style={styles.realizado}>✓ Realizado</Text>}
-            </TouchableOpacity>
-          );
-        })}
+        {!!error && <ErrorNotice message={error} onRetry={load} />}
+        <SectionHeading title="Treinos da sessão" count={sessionTreinos.length} />
+        {sessionTreinos.length ? (
+          sessionTreinos.map((treino) => (
+            <TreinoCard
+              key={treino.id}
+              treino={treino}
+              completed={completed(treino.id)}
+              onPress={
+                !sessao.horaFim && !completed(treino.id) ? () => executar(treino) : undefined
+              }
+            />
+          ))
+        ) : (
+          <Text style={UI.body}>Selecione abaixo um treino para começar.</Text>
+        )}
+        {others.length > 0 && (
+          <>
+            <SectionHeading title="Outros treinos do plano" count={others.length} />
+            <Text style={UI.body}>
+              Também é possível trabalhar estas atividades durante a sessão.
+            </Text>
+            {others.map((treino) => (
+              <TreinoCard
+                key={treino.id}
+                treino={treino}
+                onPress={!sessao.horaFim ? () => executar(treino) : undefined}
+              />
+            ))}
+          </>
+        )}
+        {!sessionTreinos.length && !others.length && (
+          <EmptyState
+            title="Nenhum treino disponível"
+            description="Este plano ainda não possui treinos cadastrados."
+          />
+        )}
       </ScrollView>
-
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <TouchableOpacity style={styles.endButton} onPress={() => navigation.navigate('EncerrarSessao', { sessaoId })}>
-          <Text style={styles.endText}>ENCERRAR SESSÃO</Text>
-        </TouchableOpacity>
+      <View style={[UI.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <AppButton
+          title={sessao.horaFim ? 'Ver registro da sessão' : 'Encerrar sessão'}
+          tone="accent"
+          onPress={
+            sessao.horaFim ? () => navigation.replace('SessaoDetail', { sessaoId }) : encerrar
+          }
+        />
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { padding: 16, paddingBottom: 116 },
-  header: { backgroundColor: Colors.surface, padding: 16, borderRadius: 8, marginBottom: 16, elevation: 2 },
-  title: { fontSize: 20, fontWeight: 'bold', color: Colors.text, marginBottom: 8 },
-  info: { fontSize: 16, color: Colors.textSecondary },
-  subtitle: { fontSize: 18, fontWeight: 'bold', color: Colors.text, marginBottom: 12 },
-  realizado: { color: Colors.success, fontWeight: 'bold', position: 'absolute', top: 24, right: 24 },
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingTop: 16, backgroundColor: Colors.surface, borderTopWidth: 1, borderTopColor: Colors.border },
-  endButton: { backgroundColor: Colors.danger, padding: 16, borderRadius: 8, alignItems: 'center' },
-  endText: { color: Colors.surface, fontSize: 16, fontWeight: 'bold' }
-});
-
 export default SessaoEmAndamentoScreen;

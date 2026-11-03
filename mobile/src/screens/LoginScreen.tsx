@@ -1,60 +1,102 @@
-import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useContext, useRef, useState } from 'react';
+import { View, Text, Alert, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../contexts/AuthContext';
 import { getApiErrorMessage } from '../services/getApiErrorMessage';
+import { FormField, FormScreen } from '../components/FormScreen';
+import { AppButton } from '../components/ScreenUI';
 import { Colors } from '../theme/colors';
-
+import { UI } from '../theme/styles';
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [loading, setLoading] = useState(false);
+  const lock = useRef(false);
   const { signIn } = useContext(AuthContext);
-
-  const handleLogin = async () => {
+  const entrar = async () => {
+    if (lock.current) return;
+    if (!email.trim() || !senha) {
+      Alert.alert('Preencha seus dados', 'Informe seu e-mail e sua senha para entrar.');
+      return;
+    }
+    lock.current = true;
+    setLoading(true);
     try {
-      await signIn(email, senha);
-    } catch (error: unknown) {
-      Alert.alert('Erro', getApiErrorMessage(error, 'Não foi possível entrar. Confira seu e-mail e senha.'));
+      await signIn(email.trim(), senha);
+    } catch (err) {
+      Alert.alert(
+        'Não foi possível entrar',
+        getApiErrorMessage(err, 'Confira seu e-mail, sua senha e a conexão com a clínica.'),
+      );
+    } finally {
+      lock.current = false;
+      setLoading(false);
     }
   };
-
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView style={styles.keyboardAvoiding} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>ClinicABA</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="E-mail"
+    <SafeAreaView style={UI.screen} edges={['top']}>
+      <FormScreen
+        headerOffset={0}
+        contentContainerStyle={{ justifyContent: 'center', paddingVertical: 40 }}
+      >
+        <View style={styles.mark}>
+          <View style={[styles.tile, { backgroundColor: Colors.primary }]} />
+          <View
+            style={[styles.tile, { backgroundColor: Colors.accent, borderTopRightRadius: 24 }]}
+          />
+          <View
+            style={[styles.tile, { backgroundColor: Colors.lavender, borderBottomLeftRadius: 24 }]}
+          />
+          <View style={[styles.tile, { backgroundColor: Colors.primarySoft }]} />
+        </View>
+        <View style={{ gap: 10 }}>
+          <Text style={UI.eyebrow}>CLINICABA</Text>
+          <Text style={[UI.title, { fontSize: 34, lineHeight: 42 }]}>
+            Cuidar começa{'\n'}com conexão.
+          </Text>
+          <Text style={UI.body}>
+            Entre para acompanhar seus pacientes e registrar cada evolução.
+          </Text>
+        </View>
+        <View style={[UI.card, { gap: 20 }]}>
+          <FormField
+            label="E-mail"
+            placeholder="seuemail@clinica.com"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
+            autoCorrect={false}
             keyboardType="email-address"
+            autoComplete="email"
+            textContentType="username"
+            editable={!loading}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Senha"
+          <FormField
+            label="Senha"
+            placeholder="Sua senha"
             value={senha}
             onChangeText={setSenha}
             secureTextEntry
+            autoComplete="current-password"
+            textContentType="password"
+            editable={!loading}
+            returnKeyType="go"
+            onSubmitEditing={entrar}
           />
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Entrar</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          <AppButton
+            title={loading ? 'Entrando...' : 'Entrar →'}
+            loading={loading}
+            onPress={entrar}
+          />
+        </View>
+        <Text style={styles.footer}>Um espaço para acompanhar cada conquista.</Text>
+      </FormScreen>
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: Colors.background },
-  keyboardAvoiding: { flex: 1 },
-  container: { flexGrow: 1, justifyContent: 'center', padding: 24, backgroundColor: Colors.background },
-  title: { fontSize: 32, fontWeight: 'bold', color: Colors.primary, textAlign: 'center', marginBottom: 48 },
-  input: { backgroundColor: Colors.surface, padding: 16, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: Colors.border },
-  button: { backgroundColor: Colors.primary, padding: 16, borderRadius: 8, alignItems: 'center' },
-  buttonText: { color: Colors.surface, fontSize: 16, fontWeight: 'bold' }
+  mark: { width: 76, height: 76, flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 12 },
+  tile: { width: 36, height: 36, borderRadius: 10 },
+  footer: { fontSize: 12, lineHeight: 19, color: Colors.textSecondary, textAlign: 'center' },
 });
-
 export default LoginScreen;

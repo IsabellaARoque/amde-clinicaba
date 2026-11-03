@@ -31,10 +31,7 @@ const HistoricoSessoesPage: React.FC = () => {
       <div className="page-header">
         <h1>Histórico de Sessões</h1>
 
-        <Link
-          to={`/assistidos/${assistidoId}`}
-          className="btn-secondary"
-        >
+        <Link to={`/assistidos/${assistidoId}`} className="btn-secondary">
           Voltar ao Perfil
         </Link>
       </div>
@@ -47,18 +44,14 @@ const HistoricoSessoesPage: React.FC = () => {
           };
 
           const profissionalNome =
-            dadosSessao.profissional?.nome ??
-            dadosSessao.profissionalNome ??
-            'Não informado';
+            dadosSessao.profissional?.nome ?? dadosSessao.profissionalNome ?? 'Não informado';
 
           return (
             <div key={sessao.id} className="list-item">
               <div className="item-info">
                 <h3>
                   Sessão -{' '}
-                  {sessao.data
-                    ? new Date(sessao.data).toLocaleDateString()
-                    : 'Data não informada'}
+                  {sessao.data ? new Date(sessao.data).toLocaleDateString() : 'Data não informada'}
                 </h3>
 
                 <p>
@@ -67,19 +60,11 @@ const HistoricoSessoesPage: React.FC = () => {
                   Profissional: {profissionalNome}
                 </p>
 
-                <p>
-                  Score:{' '}
-                  {typeof sessao.score === 'number'
-                    ? sessao.score.toFixed(2)
-                    : 'Não informado'}
-                </p>
+                <p>Score: {typeof sessao.score === 'number' ? sessao.score : 'Não informado'}</p>
               </div>
 
               <div className="item-actions">
-                <Link
-                  to={`/sessoes/${sessao.id}`}
-                  className="btn-primary"
-                >
+                <Link to={`/sessoes/${sessao.id}`} className="btn-primary">
                   Ver Detalhes
                 </Link>
               </div>
@@ -87,9 +72,7 @@ const HistoricoSessoesPage: React.FC = () => {
           );
         })}
 
-        {sessoes.length === 0 && (
-          <p className="no-data">Nenhuma sessão registrada.</p>
-        )}
+        {sessoes.length === 0 && <p className="no-data">Nenhuma sessão registrada.</p>}
       </div>
     </div>
   );

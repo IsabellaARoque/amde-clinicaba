@@ -10,7 +10,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ score }) => {
   return (
     <div className="score-card">
       <div className="score-title">{score.categoriaNome}</div>
-      <div className="score-value">{score.valor.toFixed(2)}</div>
+      <div className="score-value">{score.valor}</div>
     </div>
   );
 };

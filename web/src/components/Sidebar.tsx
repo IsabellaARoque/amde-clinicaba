@@ -10,11 +10,19 @@ const Sidebar: React.FC = () => {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <h2>ClinicABA</h2>
+        <div className="brand" aria-label="ClinicABA">
+          <span className="brand-mark" aria-hidden="true">
+            <span /><span /><span /><span />
+          </span>
+          <span className="brand-copy">
+            <strong>ClinicABA</strong>
+            <small>Cuidado e evolução</small>
+          </span>
+        </div>
       </div>
       <nav className="sidebar-nav">
         <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
-          <FiHome /> Dashboard
+          <FiHome /> Pacientes
         </NavLink>
         <NavLink to="/perfil" className={({ isActive }) => isActive ? 'active' : ''}>
           <FiUser /> Meu Perfil

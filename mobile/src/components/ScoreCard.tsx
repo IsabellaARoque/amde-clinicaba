@@ -2,41 +2,24 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors } from '../theme/colors';
 import { ScorePorCategoria } from '../types';
-
-interface ScoreCardProps {
-  score: ScorePorCategoria;
-}
-
-export const ScoreCard = ({ score }: ScoreCardProps) => (
+export const ScoreCard = ({ score }: { score: ScorePorCategoria }) => (
   <View style={styles.card}>
     <Text style={styles.title}>{score.categoria.nome}</Text>
-    <Text style={styles.value}>{score.valor.toFixed(2)}%</Text>
+    <Text style={styles.value}>{score.valor.toLocaleString('pt-BR')}</Text>
   </View>
 );
-
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
-    padding: 16,
-    borderRadius: 8,
-    marginVertical: 8,
+    padding: 18,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
+    gap: 14,
   },
-  title: {
-    fontSize: 16,
-    color: Colors.text,
-    fontWeight: 'bold',
-  },
-  value: {
-    fontSize: 18,
-    color: Colors.primary,
-    fontWeight: 'bold',
-  },
+  title: { fontSize: 15, lineHeight: 23, color: Colors.text, fontWeight: '600', flex: 1 },
+  value: { fontSize: 18, color: Colors.primaryDark, fontWeight: '700' },
 });

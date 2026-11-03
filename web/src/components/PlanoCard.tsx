@@ -10,10 +10,14 @@ interface PlanoCardProps {
 const PlanoCard: React.FC<PlanoCardProps> = ({ plano }) => {
   return (
     <div className={`plano-card ${plano.status.toLowerCase()}`}>
-      <h3>{plano.nome}</h3>
-      <p><strong>Objetivo:</strong> {plano.objetivo}</p>
-      <p><strong>Status:</strong> <span className={`status-badge ${plano.status.toLowerCase()}`}>{plano.status}</span></p>
-      <Link to={`/planos/${plano.id}`} className="btn-details">Ver Detalhes</Link>
+      <div className="plano-card-header">
+        <h3>{plano.nome}</h3>
+        <span className={`status-badge ${plano.status.toLowerCase()}`}>
+          {plano.status === 'ATIVO' ? 'Ativo' : 'Inativo'}
+        </span>
+      </div>
+      <p className="plano-card-objective">{plano.objetivo || 'Objetivo não informado.'}</p>
+      <Link to={`/planos/${plano.id}`} className="btn-details">Acessar plano →</Link>
     </div>
   );
 };

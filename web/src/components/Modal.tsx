@@ -12,11 +12,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <div className="modal-overlay" role="presentation" onMouseDown={onClose}>
+      <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-title" onMouseDown={event => event.stopPropagation()}>
         <div className="modal-header">
-          <h2>{title}</h2>
-          <button className="modal-close" onClick={onClose}>&times;</button>
+          <h2 id="modal-title">{title}</h2>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar">&times;</button>
         </div>
         <div className="modal-body">
           {children}

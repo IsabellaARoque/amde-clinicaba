@@ -1,84 +1,75 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Text, View, Alert, Platform } from 'react-native';
 import { sessaoService } from '../services/sessaoService';
 import { getApiErrorMessage } from '../services/getApiErrorMessage';
-import { Colors } from '../theme/colors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { FormField, FormScreen } from '../components/FormScreen';
+import { AppButton, Badge } from '../components/ScreenUI';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
+import { isValidScore } from '../utils/presentation';
+import { UI } from '../theme/styles';
 const EncerrarSessaoScreen = ({ route, navigation }: any) => {
   const { sessaoId } = route.params;
-  const insets = useSafeAreaInsets();
   const [observacoes, setObservacoes] = useState('');
-  const [scoreFinal, setScoreFinal] = useState('');
+  const [score, setScore] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const handleEncerrar = async () => {
-    if (!scoreFinal || isNaN(Number(scoreFinal))) {
-      Alert.alert('Erro', 'Informe um score final válido para a sessão.');
+  const lock = useRef(false);
+  const permitExit = useUnsavedChanges(!!observacoes || !!score, saving);
+  const encerrar = async () => {
+    if (lock.current) return;
+    if (!isValidScore(score)) {
+      Alert.alert('Confira o score final', 'Informe um número inteiro válido.');
       return;
     }
-
+    lock.current = true;
     setSaving(true);
     try {
-      await sessaoService.encerrar(sessaoId, observacoes, Number(scoreFinal));
-      Alert.alert('Sucesso', 'Sessão encerrada com sucesso!', [
-        { text: 'OK', onPress: () => navigation.popToTop() }
+      await sessaoService.encerrar(sessaoId, observacoes.trim(), Number(score));
+      permitExit();
+      Alert.alert('Sessão encerrada', 'O atendimento foi salvo no histórico do paciente.', [
+        { text: 'Concluir', onPress: () => navigation.popToTop() },
       ]);
-    } catch (error) {
-      Alert.alert('Erro', getApiErrorMessage(error, 'Não foi possível encerrar a sessão.'));
+    } catch (err) {
+      Alert.alert(
+        'Não foi possível encerrar',
+        getApiErrorMessage(err, 'Seus dados continuam nesta tela. Tente novamente.'),
+      );
     } finally {
+      lock.current = false;
       setSaving(false);
     }
   };
-
   return (
-    <KeyboardAvoidingView style={styles.keyboardAvoiding} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: 16 + insets.bottom }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title}>Resumo da Sessão</Text>
-      
-        <View style={styles.form}>
-        <Text style={styles.label}>Observações Gerais</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Descreva como foi a sessão de forma geral..."
+    <FormScreen>
+      <Badge>Finalizar atendimento</Badge>
+      <Text style={UI.title}>Resumo da sessão</Text>
+      <Text style={UI.body}>Registre os pontos importantes do atendimento antes de encerrar.</Text>
+      <View style={[UI.card, { gap: 20 }]}>
+        <FormField
+          label="Observações gerais"
+          placeholder="Descreva a evolução, as dificuldades e as orientações..."
           value={observacoes}
           onChangeText={setObservacoes}
           multiline
-          numberOfLines={4}
+          editable={!saving}
         />
-
-        <Text style={styles.label}>Score Final da Sessão</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ex: 85"
-          value={scoreFinal}
-          onChangeText={setScoreFinal}
-          keyboardType="numeric"
+        <FormField
+          label="Score final da sessão *"
+          hint="Valor inteiro informado pela clínica."
+          placeholder="Ex.: 85"
+          value={score}
+          onChangeText={setScore}
+          keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
+          editable={!saving}
+          returnKeyType="done"
         />
-
-        <TouchableOpacity style={styles.btn} onPress={handleEncerrar} disabled={saving}>
-          <Text style={styles.btnText}>{saving ? 'ENCERRANDO...' : 'CONFIRMAR ENCERRAMENTO'}</Text>
-        </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View>
+      <AppButton
+        title={saving ? 'Encerrando...' : 'Confirmar encerramento'}
+        tone="success"
+        loading={saving}
+        onPress={encerrar}
+      />
+    </FormScreen>
   );
 };
-
-const styles = StyleSheet.create({
-  keyboardAvoiding: { flex: 1 },
-  container: { flex: 1, backgroundColor: Colors.background, padding: 16 },
-  title: { fontSize: 24, fontWeight: 'bold', color: Colors.text, marginBottom: 24 },
-  form: { backgroundColor: Colors.surface, padding: 16, borderRadius: 8, elevation: 2 },
-  label: { fontSize: 16, fontWeight: 'bold', color: Colors.text, marginBottom: 8 },
-  input: { backgroundColor: Colors.background, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, marginBottom: 16, fontSize: 16 },
-  textArea: { height: 120, textAlignVertical: 'top' },
-  btn: { backgroundColor: Colors.danger, padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 16 },
-  btnText: { color: Colors.surface, fontSize: 18, fontWeight: 'bold' }
-});
-
 export default EncerrarSessaoScreen;

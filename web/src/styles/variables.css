@@ -1,17 +1,27 @@
 :root {
-  --primary-color: #4A90D9;
-  --primary-dark: #357ABD;
-  --secondary-color: #6C5CE7;
-  --bg-color: #F5F7FA;
-  --text-color: #333333;
-  --text-light: #666666;
-  --white: #FFFFFF;
-  --border-color: #E2E8F0;
-  --error-color: #E53E3E;
-  --success-color: #38A169;
-  --warning-color: #D69E2E;
-  
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
-  --border-radius: 8px;
+  --primary-color: #4faeff;
+  --primary-dark: #1268a6;
+  --primary-soft: #cceeff;
+  --secondary-color: #6d57b7;
+  --lavender: #f0ecf7;
+  --accent-color: #ffd044;
+  --bg-color: #fafcfe;
+  --surface-color: #ffffff;
+  --text-color: #173246;
+  --text-light: #526b7a;
+  --muted-color: #8296a4;
+  --white: #ffffff;
+  --border-color: #dfe8ef;
+  --error-color: #b93649;
+  --error-soft: #fcecef;
+  --success-color: #177a51;
+  --success-soft: #e3f6e8;
+  --warning-color: #996800;
+  --warning-soft: #fff6d9;
+  --shadow-sm: 0 10px 30px rgba(34, 78, 105, 0.07);
+  --shadow-md: 0 22px 70px rgba(34, 78, 105, 0.13);
+  --border-radius-sm: 16px;
+  --border-radius: 22px;
+  --border-radius-lg: 30px;
+  --sidebar-width: 264px;
 }

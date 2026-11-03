@@ -3,8 +3,8 @@ import '../styles/components/LoadingSpinner.css';
 
 const LoadingSpinner: React.FC = () => {
   return (
-    <div className="loading-container">
-      <div className="spinner"></div>
+    <div className="loading-container" role="status" aria-label="Carregando">
+      <div className="spinner" aria-hidden="true"></div>
     </div>
   );
 };

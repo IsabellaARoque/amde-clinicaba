@@ -1,64 +1,55 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { Colors } from '../theme/colors';
+import { UI } from '../theme/styles';
 import { Treino } from '../types';
-
-interface TreinoCardProps {
+import { Badge } from './ScreenUI';
+export const TreinoCard = ({
+  treino,
+  onPress,
+  selected,
+  completed = false,
+}: {
   treino: Treino;
   onPress?: () => void;
   selected?: boolean;
-}
-
-export const TreinoCard = ({ treino, onPress, selected }: TreinoCardProps) => (
-  <TouchableOpacity 
-    style={[styles.card, selected && styles.selectedCard]} 
+  completed?: boolean;
+}) => (
+  <Pressable
+    accessibilityRole={onPress ? 'button' : undefined}
+    accessibilityState={{ disabled: !onPress }}
     onPress={onPress}
     disabled={!onPress}
+    style={({ pressed }) => [
+      styles.card,
+      selected && styles.selected,
+      completed && styles.completed,
+      pressed && { opacity: 0.8 },
+    ]}
   >
-    <View style={styles.header}>
-      <Text style={styles.title}>{treino.nome}</Text>
-      <Text style={styles.badge}>{treino.medicao}</Text>
+    <View style={UI.row}>
+      <Text style={[styles.title, { flex: 1 }]}>{treino.nome}</Text>
+      <Badge tone={completed ? 'success' : 'muted'}>
+        {completed ? '✓ Concluído' : treino.medicao === 'FREQUENCIA' ? 'Frequência' : 'Duração'}
+      </Badge>
     </View>
-    <Text style={styles.subtitle}>{treino.objetivo}</Text>
-  </TouchableOpacity>
+    {!!treino.objetivo && <Text style={UI.body}>{treino.objetivo}</Text>}
+    {!!treino.atividade && <Text style={UI.body}>{treino.atividade}</Text>}
+    {!!treino.categoria && <Text style={styles.category}>{treino.categoria.nome}</Text>}
+  </Pressable>
 );
-
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
-    padding: 16,
-    borderRadius: 8,
-    marginVertical: 8,
-    elevation: 2,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    padding: 18,
+    borderRadius: 20,
+    marginVertical: 4,
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
   },
-  selectedCard: {
-    borderColor: Colors.primary,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 16,
-    color: Colors.text,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  badge: {
-    backgroundColor: Colors.lightGray,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
+  selected: { borderColor: Colors.primaryDark, backgroundColor: '#F0F9FF' },
+  completed: { borderColor: '#B6DDC4', backgroundColor: '#F3FBF5' },
+  title: { color: Colors.text, fontSize: 16, lineHeight: 23, fontWeight: '700' },
+  category: { color: Colors.primaryDark, fontSize: 12, fontWeight: '600' },
 });

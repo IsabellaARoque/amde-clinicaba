@@ -1,326 +1,118 @@
-
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { View, Text, ScrollView, RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AuthContext } from '../contexts/AuthContext';
 import { sessaoService } from '../services/sessaoService';
+import { getApiErrorMessage } from '../services/getApiErrorMessage';
 import { Sessao } from '../types';
 import { Colors } from '../theme/colors';
+import { UI } from '../theme/styles';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const SessaoDetailScreen = ({ route }: any) => {
+import { AppButton, Badge, EmptyState, ErrorNotice, SectionHeading } from '../components/ScreenUI';
+import { formatClock, formatDate } from '../utils/presentation';
+const SessaoDetailScreen = ({ route, navigation }: any) => {
   const { sessaoId } = route.params;
+  const { user } = useContext(AuthContext);
   const insets = useSafeAreaInsets();
-
   const [sessao, setSessao] = useState<Sessao | null>(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await sessaoService.getSessao(sessaoId);
-        setSessao(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
+  const [error, setError] = useState('');
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setSessao(await sessaoService.getSessao(sessaoId));
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível carregar a sessão.'));
+    } finally {
+      setLoading(false);
     }
-
-    load();
   }, [sessaoId]);
-
-  if (loading || !sessao) {
-    return <LoadingSpinner />;
-  }
-
-  const formatarDuracao = (duracao: unknown) => {
-    if (duracao === null || duracao === undefined || duracao === '') {
-      return 'Não informado';
-    }
-    if (typeof duracao === 'number' || !isNaN(Number(duracao))) {
-      const totalSegundos = Number(duracao);
-
-      if (!Number.isFinite(totalSegundos) || totalSegundos < 0) {
-        return 'Não informado';
-      }
-
-      const horas = Math.floor(totalSegundos / 3600);
-      const minutos = Math.floor((totalSegundos % 3600) / 60);
-      const segundos = Math.floor(totalSegundos % 60);
-
-      if (horas > 0) {
-        return `${horas}h ${minutos}min ${segundos}s`;
-      }
-
-      if (minutos > 0) {
-        return `${minutos}min ${segundos}s`;
-      }
-
-      return `${segundos}s`;
-    }
-    return String(duracao);
-  };
-
+  useEffect(() => {
+    void load();
+  }, [load]);
+  if (loading && !sessao) return <LoadingSpinner />;
+  if (!sessao)
+    return (
+      <View style={[UI.screen, UI.content]}>
+        <EmptyState title="Não foi possível abrir o registro" description={error} onRetry={load} />
+      </View>
+    );
+  const treinos = sessao.treinosSessao ?? [];
+  const done = treinos.filter((item) => item.score != null);
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={{
-        paddingBottom: 16 + insets.bottom,
-      }}
+      style={UI.screen}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
+      contentContainerStyle={[UI.content, { paddingBottom: 28 + insets.bottom }]}
     >
-      <View style={styles.card}>
-        <Text style={styles.title}>
-          Data: {new Date(sessao.data).toLocaleDateString()}
+      <View style={[UI.card, { backgroundColor: Colors.primarySoft, gap: 12 }]}>
+        <Badge tone={sessao.horaFim ? 'success' : 'warning'}>
+          {sessao.horaFim ? 'Sessão encerrada' : 'Em aberto'}
+        </Badge>
+        <Text style={UI.title}>{sessao.assistidoNome}</Text>
+        <Text style={UI.heading}>{formatDate(sessao.data)}</Text>
+        <Text style={UI.body}>
+          {sessao.horaInicio?.slice(0, 5)} — {sessao.horaFim?.slice(0, 5) || 'Em andamento'}
         </Text>
-
-        <Text style={styles.text}>
-          Horário: {sessao.horaInicio} - {sessao.horaFim || 'Em andamento'}
-        </Text>
-
-        <Text style={styles.text}>
-          Profissional: {sessao.profissional.nome}
-        </Text>
-
-        <Text style={styles.text}>
-          Score Geral: {sessao.score != null ? `${sessao.score}%` : 'N/A'}
-        </Text>
-
-        <Text style={styles.text}>
-          Observações: {sessao.observacoes || 'Nenhuma'}
-        </Text>
+        <Text style={UI.body}>{sessao.planoNome}</Text>
+        <Text style={UI.body}>Profissional: {sessao.profissional?.nome || 'Não informado'}</Text>
       </View>
-
-      <Text style={styles.sectionTitle}>
-        Treinos Realizados ({sessao.treinosSessao?.length || 0})
-      </Text>
-
-      {sessao.treinosSessao?.map((ts: any) => {
-        const medicao = String(ts.treino?.medicao || '').toUpperCase();
-        const frequencia = ts.registroFrequencia;
-        const duracao = ts.registroDuracao;
-
-        return (
-          <View key={ts.id} style={styles.treinoCard}>
-            <Text style={styles.treinoTitle}>
-              {ts.treino.nome}
-            </Text>
-
-            <View style={styles.tipoContainer}>
-              <Text style={styles.tipoText}>
-                {medicao === 'FREQUENCIA'
-                  ? 'Treino de Frequência'
-                  : medicao === 'DURACAO'
-                    ? 'Treino de Duração'
-                    : 'Tipo de medição não identificado'}
+      {!!error && <ErrorNotice message={error} onRetry={load} />}
+      {!sessao.horaFim && sessao.profissional?.id === user?.id && (
+        <AppButton
+          title="Retomar sessão →"
+          tone="accent"
+          onPress={() => navigation.replace('SessaoEmAndamento', { sessaoId })}
+        />
+      )}
+      <View style={[UI.card, { gap: 10 }]}>
+        <Text style={UI.label}>Score geral</Text>
+        <Text style={[UI.title, { color: Colors.primaryDark }]}>
+          {sessao.horaFim && sessao.score != null ? sessao.score : 'Ainda não finalizado'}
+        </Text>
+        <View style={UI.divider} />
+        <Text style={UI.label}>Observações gerais</Text>
+        <Text style={UI.body}>{sessao.observacoes || 'Nenhuma observação registrada.'}</Text>
+      </View>
+      <SectionHeading title="Treinos" count={treinos.length} />
+      <Text style={UI.body}>{done.length} treino(s) com resultado registrado.</Text>
+      {!treinos.length && <EmptyState title="Nenhum treino registrado" />}
+      {treinos.map((item) => (
+        <View key={item.id} style={[UI.card, { gap: 12 }]}>
+          <Text style={UI.heading}>{item.treino.nome}</Text>
+          <View style={UI.wrap}>
+            <Badge>{item.treino.medicao === 'FREQUENCIA' ? 'Frequência' : 'Duração'}</Badge>
+            <Badge tone={item.score != null ? 'success' : 'warning'}>
+              {item.score != null ? 'Concluído' : 'Sem resultado final'}
+            </Badge>
+          </View>
+          {item.registroFrequencia && (
+            <View style={{ gap: 10 }}>
+              <Text style={UI.body}>
+                Executou sem ajuda: {item.registroFrequencia.execSemAjuda}
+              </Text>
+              <Text style={UI.body}>
+                Executou com ajuda: {item.registroFrequencia.execComAjuda}
+              </Text>
+              <Text style={UI.body}>Não executou: {item.registroFrequencia.naoExecutado}</Text>
+              <Text style={UI.label}>
+                Total de tentativas:{' '}
+                {item.registroFrequencia.execSemAjuda +
+                  item.registroFrequencia.execComAjuda +
+                  item.registroFrequencia.naoExecutado}
               </Text>
             </View>
-
-            {medicao === 'FREQUENCIA' && (
-              <View style={styles.resultadosContainer}>
-                <View style={styles.resultadoItem}>
-                  <View style={[styles.indicador, styles.indicadorVerde]} />
-                  <Text style={styles.resultadoLabel}>
-                    Executou sem ajuda
-                  </Text>
-                  <Text style={styles.resultadoValor}>
-                    {frequencia?.execSemAjuda ?? 0}
-                  </Text>
-                </View>
-
-                <View style={styles.resultadoItem}>
-                  <View style={[styles.indicador, styles.indicadorAmarelo]} />
-                  <Text style={styles.resultadoLabel}>
-                    Executou com ajuda
-                  </Text>
-                  <Text style={styles.resultadoValor}>
-                    {frequencia?.execComAjuda ?? 0}
-                  </Text>
-                </View>
-
-                <View style={styles.resultadoItem}>
-                  <View style={[styles.indicador, styles.indicadorVermelho]} />
-                  <Text style={styles.resultadoLabel}>
-                    Não executou
-                  </Text>
-                  <Text style={styles.resultadoValor}>
-                    {frequencia?.naoExecutado ?? 0}
-                  </Text>
-                </View>
-
-                <View style={styles.totalContainer}>
-                  <Text style={styles.totalLabel}>
-                    Total de tentativas
-                  </Text>
-                  <Text style={styles.totalValor}>
-                    {(frequencia?.execSemAjuda ?? 0) +
-                      (frequencia?.execComAjuda ?? 0) +
-                      (frequencia?.naoExecutado ?? 0)}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {medicao === 'DURACAO' && (
-              <View style={styles.duracaoContainer}>
-                <Text style={styles.duracaoLabel}>
-                  Duração registrada
-                </Text>
-
-                <Text style={styles.duracaoValor}>
-                  {formatarDuracao(duracao?.duracao)}
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.divider} />
-
-            <Text style={styles.text}>
-              Score: {ts.score != null ? `${ts.score}%` : 'N/A'}
-            </Text>
-
-            <Text style={styles.text}>
-              Observações: {ts.observacoes || '-'}
-            </Text>
-          </View>
-        );
-      })}
+          )}
+          {item.registroDuracao && (
+            <Text style={UI.heading}>Duração: {formatClock(item.registroDuracao.duracao)}</Text>
+          )}
+          <View style={UI.divider} />
+          <Text style={UI.label}>Score: {item.score != null ? item.score : 'Não informado'}</Text>
+          <Text style={UI.body}>{item.observacoes || 'Nenhuma observação registrada.'}</Text>
+        </View>
+      ))}
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    padding: 16,
-  },
-  card: {
-    backgroundColor: Colors.surface,
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-    elevation: 2,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  text: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginBottom: 6,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  treinoCard: {
-    backgroundColor: Colors.surface,
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  treinoTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  tipoContainer: {
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.background,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    marginBottom: 14,
-  },
-  tipoText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  resultadosContainer: {
-    marginBottom: 12,
-  },
-  resultadoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  indicador: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 10,
-  },
-  indicadorVerde: {
-    backgroundColor: Colors.success,
-  },
-  indicadorAmarelo: {
-    backgroundColor: Colors.warning,
-  },
-  indicadorVermelho: {
-    backgroundColor: Colors.danger,
-  },
-  resultadoLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  resultadoValor: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-  },
-  totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-    padding: 10,
-    backgroundColor: Colors.background,
-    borderRadius: 8,
-  },
-  totalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  totalValor: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-  },
-  duracaoContainer: {
-    backgroundColor: Colors.background,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  duracaoLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 6,
-  },
-  duracaoValor: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: Colors.primary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: 12,
-  },
-});
-
 export default SessaoDetailScreen;
