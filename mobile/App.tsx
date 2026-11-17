@@ -5,13 +5,16 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/contexts/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
+import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 const App = () => (
   <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar barStyle="dark-content" />
-        <AppNavigator />
-      </AuthProvider>
+      <AppErrorBoundary>
+        <AuthProvider>
+          <StatusBar barStyle="dark-content" />
+          <AppNavigator />
+        </AuthProvider>
+      </AppErrorBoundary>
     </SafeAreaProvider>
   </GestureHandlerRootView>
 );

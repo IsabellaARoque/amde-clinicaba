@@ -1,10 +1,11 @@
 import { api } from './api';
 import { TreinoSessao } from '../types';
+import { requireObject } from './validateResponse';
 
 export const treinoService = {
   iniciarTreinoSessao: async (sessaoId: number, treinoId: number): Promise<TreinoSessao> => {
     const response = await api.post(`/sessoes/${sessaoId}/treinos/${treinoId}/iniciar`);
-    return response.data;
+    return requireObject<TreinoSessao>(response.data, 'o treino da sessão');
   },
   registroFrequencia: async (treinoSessaoId: number, execSemAjuda: number, execComAjuda: number, naoExecutado: number): Promise<void> => {
     await api.post(`/treino-sessao/${treinoSessaoId}/registro-frequencia`, { execSemAjuda, execComAjuda, naoExecutado });
