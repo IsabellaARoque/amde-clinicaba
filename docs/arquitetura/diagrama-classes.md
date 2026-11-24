@@ -1,31 +1,29 @@
 # Diagrama de Classes de Domínio — Sistema AMDE
 
-> O diagrama de classes representa a estrutura estática do sistema ClinicABA, apresentando as principais entidades do domínio, seus atributos, operações, relacionamentos e multiplicidades. O modelo contempla o gerenciamento de profissionais, salas, assistidos, planos de intervenção, sessões e treinos, além das diferentes formas de registro de execução das atividades terapêuticas.
-
-> **Referência no Template Fatec ADS:**
-> Exigido no Capítulo 2.5 (*"Diagramas — Caso de Uso, DER, Diagramas de Classes"*). No texto acadêmico, o diagrama deve ser precedido por sua contextualização conceitual e seguido da explicação das principais classes de domínio e suas responsabilidades.
+> O diagrama de classes representa a estrutura estática do sistema ClinicABA, apresentando as principais entidades do domínio, seus atributos, operações, relacionamentos e multiplicidades. O modelo contempla o gerenciamento de profissionais, salas, assistidos, planos de interve
+nção, sessões e treinos, além das diferentes formas de registro de execução das atividades terapêuticas.
 
 
 # Descrição das Classes e Responsabilidades
-- **Classe `Sala`:** Representa as salas utilizadas nos atendimentos da AMDE. Armazena sua identificação e numeração, permitindo o cadastro e a alteração de informações. Relaciona-se aos profissionais e aos assistidos vinculados à respectiva sala.
+**Profissional:** Representa os profissionais responsáveis pelo atendimento e acompanhamento dos assistidos na instituição. Armazena informações de identificação, contato e permissões de acesso ao sistema. Suas operações permitem realizar cadastro, autenticação e gerenciamento dos próprios dados de perfil, além de estabelecer a relação entre os profissionais, os assistidos, as sessões e os planos de intervenção.
 
-- **Classe `Profissional`:** Representa os profissionais responsáveis pela utilização do sistema e pelo acompanhamento terapêutico dos assistidos. Armazena informações de identificação, credenciais de acesso e permissões. Disponibiliza operações de cadastro, autenticação e gerenciamento do próprio perfil, além de relacionar-se aos assistidos, sessões e planos de intervenção.
+**Assistido:** Representa as crianças, adolescentes e jovens atendidos pela instituição. Contém informações pessoais, dados do responsável legal, convênio, sala, período e frequência de atendimento. A classe disponibiliza operações de cadastro, edição, consulta e visualização dos dados dos assistidos.
 
-- **Classe `Assistido`:** Representa as pessoas atendidas pela AMDE. Armazena informações pessoais, dados de identificação, convênio, frequência de atendimento e informações do responsável. Permite o cadastro, a edição, a consulta e a visualização do perfil do assistido.
+**Sessao:** Representa os atendimentos realizados pelos profissionais aos assistidos. Armazena informações como data, horários de início e término, observações e pontuação obtida durante o atendimento. Suas operações permitem iniciar, configurar, encerrar e visualizar uma sessão, além de editar informações e exportar os registros em PDF.
 
-- **Classe `PlanoDeIntervencao`:** Representa o planejamento terapêutico associado a um assistido. Armazena nome, objetivo, data de criação e situação do plano, permitindo sua criação, alteração, visualização, desativação e reativação. Também estabelece a associação entre os planos e os treinos que serão realizados.
+**PlanoDeIntervencao:** Representa o planejamento terapêutico individualizado elaborado para cada assistido. Armazena informações como nome, objetivos, data de criação e situação do plano. Permite criar, alterar, visualizar, desativar, reativar e consultar planos de intervenção, além de relacioná-los aos treinos que serão trabalhados durante os atendimentos.
 
-- **Classe `Sessao`:** Representa um atendimento realizado por um profissional com determinado assistido. Armazena informações como objetivo, data, horário de início e score. É responsável pelas operações de início, configuração, encerramento, edição, visualização e exportação dos registros em PDF.
+**Treino:** Representa as atividades e habilidades que serão desenvolvidas com o assistido, conforme os objetivos estabelecidos no plano de intervenção. Armazena informações como nome, objetivo, tipo de medição e descrição da atividade. Disponibiliza operações de cadastro, alteração, visualização e consulta dos treinos, além de permitir sua associação às respectivas categorias.
 
-- **Classe `Treino`:** Representa uma atividade terapêutica cadastrada em um plano de intervenção. Contém informações como nome, categoria, objetivo, tipo de medição e atividade. Permite o cadastro, a alteração e a consulta dos treinos disponíveis.
+**TreinoSessao:** Representa a execução de um treino específico durante uma sessão de atendimento. Registra informações referentes à execução, como pontuação (*score*) e observações do profissional. Suas operações permitem iniciar e encerrar a execução do treino, registrar os resultados obtidos e acompanhar o andamento das atividades realizadas durante a sessão.
 
-- **Classe `Categoria`:** Representa a classificação dos treinos cadastrados no sistema. Armazena a identificação e o nome da categoria, permitindo seu cadastro e sua edição. Cada treino está associado a uma categoria.
+**Categoria:** Representa a classificação utilizada para organizar os treinos de acordo com suas características ou áreas de desenvolvimento. Armazena o nome da categoria e disponibiliza operações para seu cadastro e edição. Essa classificação também permite organizar os resultados registrados por categoria.
 
-- **Classe `TreinoSessao`:** Representa a execução de um treino dentro de uma sessão específica. Armazena o score obtido e as observações referentes à execução, além de disponibilizar operações para iniciar, executar, registrar resultados e encerrar o treino. É uma classe especializada em registrar a ocorrência de um treino em determinada sessão.
+**ScorePorCategoria:** Responsável por armazenar a pontuação (*score*) obtida pelo assistido em determinada categoria. Possui um identificador e um valor numérico que representa o resultado registrado, permitindo a atualização dessas informações e o acompanhamento do desempenho do assistido.
 
-- **Classe `RegTreinoFrequencia`:** Especialização da classe `TreinoSessao`, responsável pelo registro dos resultados de treinos cujo tipo de medição é frequência/repetição. Armazena a quantidade de execuções realizadas sem ajuda, com ajuda e não executadas.
+**RegiTreinoFrequencia:** Especialização da classe `TreinoSessao`, destinada ao registro dos resultados de treinos mensurados por frequência. Armazena a quantidade de execuções realizadas sem ajuda, com ajuda e de tentativas não executadas, permitindo acompanhar o desempenho do assistido durante a atividade.
 
-- **Classe `RegTreinoDuracao`:** Especialização da classe `TreinoSessao`, responsável pelo registro dos resultados de treinos cujo tipo de medição é duração. Armazena o tempo registrado durante a execução da atividade.
+**RegiTreinoDuracao:** Especialização da classe `TreinoSessao`, responsável pelo registro dos resultados de treinos mensurados por duração. Armazena o tempo registrado durante a execução da atividade, permitindo acompanhar o desempenho do assistido com base no tempo utilizado para realizar determinado treino.
 
 ---
 
@@ -33,123 +31,130 @@
 
 ```mermaid
 classDiagram
-    class Sala {
-        -Long id
-        -int numero
-        +criar() void
-        +alterar() void
-    }
+class Profissional {
+    -id: Long
+    -cpf: string
+    -nome: string
+    -email: string
+    -senha: string
+    -permissao: string
+    +cadastrar(): void
+    +autenticar(senha: String): boolean
+    +visualizarPerfil(): void
+    +editarPerfil(): void
+}
 
-    class Profissional {
-        -Long id
-        -string cpf
-        -string nome
-        -string email
-        -string senha
-        -string permissao
-        +cadastrar() void
-        +autenticar(string senha) boolean
-        +visualizarPerfil() void
-        +editarPerfil() void
-    }
+class Assistido {
+    -id: Long
+    -cpf: string
+    -nome: string
+    -dataNascimento: date
+    -convenio: string
+    -sala: string
+    -agenteDeSala: string
+    -periodo: string
+    -frequencia: string
+    -nomeResponsavel: string
+    -cpfResponsavel: string
+    +cadastrar(): void
+    +editar(): void
+    +visualizarPerfil(): Assistido
+    +buscar(): Assistido
+}
 
-    class Assistido {
-        -Long cpf
-        -string nome
-        -date dataNascimento
-        -string convenio
-        -string frequencia
-        -string nomeResponsavel
-        -string telResponsavel
-        +cadastrar() void
-        +editar() void
-        +visualizarPerfil() Assistido
-        +buscar() Assistido
-    }
+class Sessao {
+    -id: Long
+    -observacoes: string
+    -data: date
+    -horaInicio: time
+    -horaFim: time
+    -score: int
+    +iniciar(): void
+    +configurar(): void
+    +encerrar(): void
+    +editar(objetivo: string): void
+    +exportarPDF(): void
+    +visualizar(): void
+}
 
-    class PlanoDeIntervencao {
-        -Long id
-        -string nome
-        -string objetivo
-        -date dataCriacao
-        -boolean status
-        +criar() void
-        +alterar() void
-        +desativar() void
-        +reativar() void
-        +visualizar() void
-        +buscarPorId() void
-    }
+class PlanoDeIntervencao {
+    -id: Long
+    -nome: string
+    -objetivo: string
+    -dataCriacao: date
+    -status: enum
+    +criar(): void
+    +alterar(): void
+    +desativar(): void
+    +reativar(): void
+    +visualizar(): void
+    +buscarPorId(): void
+}
 
-    class Sessao {
-        -Long id
-        -string objetivo
-        -date data
-        -time horarioInicio
-        -int score
-        +iniciar() void
-        +configurar() void
-        +encerrar() void
-        +editar(string objetivo) void
-        +exportarPDF() void
-        +visualizar() void
-    }
+class TreinoSessao {
+    -id: Long
+    -score: int
+    -observacao: string
+    +executarTreino(): void
+    +registrarScore(score: int): void
+    +iniciarTreinoSessao(): void
+    +encerrarTreinoSessao(): void
+}
 
-    class Treino {
-        -Long id
-        -string nome
-        -string categoria
-        -string objetivo
-        -string tipoMedicao
-        -string atividade
-        +criar() void
-        +alterar() void
-        +visualizar() void
-        +buscarPorId() void
-    }
+class Treino {
+    -id: Long
+    -nome: string
+    -objetivo: string
+    -tipoMedicao: enum
+    -atividade: string
+    +criar(): void
+    +alterar(): void
+    +visualizar(): void
+    +buscarPorId(): void
+}
 
-    class Categoria {
-        -Long idCategoria
-        -string nome
-        +cadastrar() void
-        +editar() void
-    }
+class ScorePorCategoria {
+    -id: Long
+    -valor: double
+    +editar()
+}
 
-    class TreinoSessao {
-        -Long id
-        -int score
-        -string observacao
-        +executarTreino() void
-        +registrarScore(int score) void
-        +iniciarTreinoSessao() void
-        +encerrarTreinoSessao() void
-    }
+class Categoria {
+    -id: Long
+    -nome: string
+    +cadastrar()
+    +editar()
+}
 
-    class RegTreinoFrequencia {
-        -Long idExecFreq
-        -int execucoesSemAjuda
-        -int execucoesComAjuda
-        -int naoExecutados
-        +registrarFrequencia() void
-    }
+class RegiTreinoFrequencia {
+    -id: Long
+    -execucoesSemAjuda: int
+    -execucoesComAjuda: int
+    -naoExecutados: int
+    +registrarFrequencia(): void
+}
 
-    class RegTreinoDuracao {
-        -Long idExecDuracao
-        -time duracao
-        +registrarDuracao() void
-    }
+class RegiTreinoDuracao {
+    -id: Long
+    -duracao: Long
+    +registrarDuracao(): void
+}
 
-    Sala "1" -- "1" Profissional : vinculada
-    Sala "1" -- "0..*" Assistido : organiza
-    Profissional "1" -- "0..*" Assistido : acompanha
-    Profissional "1" -- "0..*" Sessao : realiza
-    Profissional "1" -- "0..*" PlanoDeIntervencao : cria
-    PlanoDeIntervencao "1" -- "0..*" Sessao : vincula
-    PlanoDeIntervencao "1" -- "0..*" Treino : contém
-    Treino "0..*" -- "1" Categoria : pertence
-    Sessao "1" -- "0..*" TreinoSessao : registra
-    Treino "1" -- "0..*" TreinoSessao : executado em
-    TreinoSessao <|-- RegTreinoFrequencia
-    TreinoSessao <|-- RegTreinoDuracao
+Profissional "1" -- "0*" Sessao
+Profissional "1" -- "0*" PlanoDeIntervencao
+Profissional "1" -- "0*" Assistido
 
+Sessao "0*" -- "1" PlanoDeIntervencao
+Sessao "1" -- "0*" TreinoSessao
+
+PlanoDeIntervencao "1" -- "0*" Treino
+
+TreinoSessao "0*" -- "1" Treino
+
+Assistido "1" -- "0*" ScorePorCategoria
+ScorePorCategoria "0*" -- "1" Categoria
+Treino "0*" -- "1" Categoria
+
+TreinoSessao <|-- RegiTreinoFrequencia
+TreinoSessao <|-- RegiTreinoDuracao
     
