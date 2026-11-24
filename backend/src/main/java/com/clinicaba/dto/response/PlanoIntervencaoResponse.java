@@ -12,4 +12,5 @@ public class PlanoIntervencaoResponse {
     private String objetivo;
     private StatusPlano status;
     private ProfissionalResponse profissionalCriador;
+    private Long assistidoId;
 }
