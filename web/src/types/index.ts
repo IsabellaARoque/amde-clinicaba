@@ -80,6 +80,6 @@ export interface Sessao {
 
 export interface ScorePorCategoria {
   categoriaId: number;
-  categoriaNome: string;
+  categoria: Categoria;
   valor: number;
 }
