@@ -90,14 +90,15 @@ public class PlanoIntervencaoService {
         resp.setDataCriacao(p.getDataCriacao());
         resp.setObjetivo(p.getObjetivo());
         resp.setStatus(p.getStatus());
-        
+        resp.setAssistidoId(p.getAssistido().getId());
+
         ProfissionalResponse pr = new ProfissionalResponse();
         pr.setId(p.getProfissionalCriador().getId());
         pr.setNome(p.getProfissionalCriador().getNome());
         pr.setCpf(p.getProfissionalCriador().getCpf());
         pr.setEmail(p.getProfissionalCriador().getEmail());
         resp.setProfissionalCriador(pr);
-        
+
         return resp;
     }
 }

@@ -13,7 +13,6 @@ const PlanoDetailPage: React.FC = () => {
   const [plano, setPlano] = useState<PlanoIntervencao | null>(null);
   const [treinos, setTreinos] = useState<Treino[]>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -21,9 +20,6 @@ const PlanoDetailPage: React.FC = () => {
           planoService.getById(planoId),
           treinoService.getByPlanoId(planoId)
         ]);
-
-        console.log('DADOS DOS TREINOS:', treinosData);
-
         setPlano(planoData);
         setTreinos(Array.isArray(treinosData) ? treinosData : []);
       } catch (error) {
@@ -86,6 +82,13 @@ const PlanoDetailPage: React.FC = () => {
             <FiPower />
             {plano.status === 'ATIVO' ? 'Desativar' : 'Reativar'}
           </button>
+
+          <Link
+            to={`/assistidos/${plano.assistidoId}`}
+            className="btn-secondary"
+          >
+            Voltar ao Perfil
+          </Link>
         </div>
       </div>
 

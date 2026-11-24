@@ -9,7 +9,7 @@ interface ScoreCardProps {
 const ScoreCard: React.FC<ScoreCardProps> = ({ score }) => {
   return (
     <div className="score-card">
-      <div className="score-title">{score.categoriaNome}</div>
+      <div className="score-title">{score.categoria.nome}</div>
       <div className="score-value">{score.valor}</div>
     </div>
   );

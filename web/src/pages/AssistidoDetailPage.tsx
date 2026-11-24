@@ -60,6 +60,12 @@ const AssistidoDetailPage: React.FC = () => {
         <div className="header-actions">
           <Link to={`/assistidos/${assistidoId}/editar`} className="btn-secondary"><FiEdit /> Editar dados</Link>
           <Link to={`/assistidos/${assistidoId}/sessoes`} className="btn-secondary"><FiList /> Ver histórico</Link>
+          <Link
+            to={`/`}
+            className="btn-secondary"
+          >
+            Voltar
+          </Link>
         </div>
       </div>
 
